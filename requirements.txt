@@ -1,0 +1,6 @@
+pandas
+numpy
+streamlit
+streamlit-folium
+matplotlib
+networkx
