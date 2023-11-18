@@ -8,6 +8,7 @@ import numpy as np
 import networkx as nx
 import folium
 from streamlit_folium import folium_static
+from matplotlib.ticker import FuncFormatter
 
 # Create a Streamlit app
 APP_TITLE = 'Real Estate Market Guide'
@@ -71,22 +72,23 @@ def prepare_data_for_line_chart(df, suburb_name):
     
     # Group by year and calculate median house price
     median_price_by_year = selected_suburb_data.groupby('Year')['price'].median().reset_index()
-    
+    median_price_by_year['Year'] = median_price_by_year['Year'].astype(int)
     return median_price_by_year
 
 def create_bar_chart(df,selected_suburb):
     suburb_data = df[df['suburb'] == selected_suburb]
 
     # Create a bar chart using Matplotlib
-    plt.figure(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(8, 5))
     columns = df.columns[2:]  # Exclude the 'suburb' column
     values = suburb_data.iloc[0][2:]  # Exclude the 'suburb' column
-    plt.barh(columns, values)
+    ax.barh(columns, values)
 
     # Customize the layout of the bar chart
-    plt.xlabel('Metrics')
-    plt.ylabel('Value')
-    plt.title(f'Liveability Metrics for {selected_suburb}')
+
+    ax.set_xlabel('Metrics')
+    ax.set_ylabel('Value')
+    ax.set_title(f'Liveability Metrics for {selected_suburb}')
 
     return plt
 
@@ -102,6 +104,9 @@ def create_scatter_chart(df, selected_suburb):
     ax.set_ylabel('Median Price')
     ax.set_title(f'Scatter Chart: Liveability vs. Price for {selected_suburb}')
     ax.legend()
+        # Customize the y-axis label format to display values in millions
+    formatter = FuncFormatter(lambda x, _: f'{int(x / 1e6)}M')
+    ax.yaxis.set_major_formatter(formatter)
 
     return fig
 
@@ -133,14 +138,14 @@ def get_suburb_population(suburb_name, df):
     return "17,252"  
 
 def load_network_data():
-    df = pd.read_csv('data/similar_suburbsJ.csv')  # Replace 'your_data.csv' with your CSV file path
+    df = pd.read_csv('data/similar_suburbsJ.csv')  
     return df
 
 def create_network_graph(df, selected_suburb):
     # Create a NetworkX graph
     G = nx.Graph()
 
-    # Add nodes and edges based on your data
+    # Add nodes and edges 
     for index, row in df.iterrows():
         suburb = row['suburb']
         nearest_suburbs = row['nearest_suburbs'].split(',')
@@ -179,7 +184,7 @@ def create_network_graph_matplotlib(df, selected_suburb):
     # Create a NetworkX graph
     G = nx.Graph()
 
-    # Add nodes and edges based on your data
+    # Add nodes and edges
     for index, row in df.iterrows():
         suburb = row['suburb']
         nearest_suburbs = row['nearest_suburbs'].split(',')
@@ -206,9 +211,9 @@ def create_network_graph_matplotlib(df, selected_suburb):
     plt.title(f"Network Graph for {selected_suburb}")
     plt.axis('off')
 
-    # Save the Matplotlib figure or display it in your Streamlit app
+    # Save the Matplotlib figure or display it in  Streamlit app
     # You can save it to a file using plt.savefig('network_graph.png')
-    # Or display it in your Streamlit app using plt.show()
+    # Or display it in  Streamlit app using plt.show()
 
     return plt
 
@@ -226,7 +231,6 @@ def main():
         #with open("data/syd.json", "r") as json_file:
         #    data = json.load(json_file)
 
-        # Load your CSV data (replace with your actual data file and column names)
         csv_data = pd.read_csv("data/domain_properties.csv")
         csv_data['Date'] = pd.to_datetime(csv_data['date_sold'])  # Convert the date column to datetime
 
@@ -248,7 +252,7 @@ def main():
 
             # Get the "km from cbd" value
             suburb_sqkm = get_suburb_sqkm(suburb_name, csv_data)
-            st.info(f'Population: {suburb_sqkm}')
+            st.info(f'Suburb Area: {suburb_sqkm}')
 
             # Get the "suburb_population" value
             suburb_population = get_suburb_population(suburb_name, csv_data)
@@ -262,7 +266,8 @@ def main():
             ax.set_xlabel('Year')
             ax.set_ylabel('Median House Price')
             ax.set_title(f'Median House Price in {suburb_to_display} Over the Years')
-
+            formatter = FuncFormatter(lambda x, _: f'{int(x / 1e6)}M')
+            ax.yaxis.set_major_formatter(formatter)
             # Display the line chart in col2
             st.pyplot(fig) 
 
@@ -284,8 +289,8 @@ def main():
         col1, col2 = st.columns(2)
 
         with col1:
-            # Load data for the bar chart (replace with your actual data)
-            data_for_bar_chart = pd.read_csv("data/test.csv")
+            # Loading data for the bar chart
+            data_for_bar_chart = pd.read_csv("data/liveability.csv")
 
             if not suburb_name:
                 suburb_name = "Sydney"
