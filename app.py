@@ -8,7 +8,7 @@ import numpy as np
 import networkx as nx
 import folium
 from streamlit_folium import folium_static
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter,MaxNLocator
 
 # Create a Streamlit app
 APP_TITLE = 'Real Estate Market Guide'
@@ -268,6 +268,7 @@ def main():
             ax.set_title(f'Median House Price in {suburb_to_display} Over the Years')
             formatter = FuncFormatter(lambda x, _: f'{int(x / 1e6)}M')
             ax.yaxis.set_major_formatter(formatter)
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
             # Display the line chart in col2
             st.pyplot(fig) 
 
