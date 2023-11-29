@@ -11,7 +11,7 @@ from streamlit_folium import folium_static
 from matplotlib.ticker import FuncFormatter,MaxNLocator
 
 # Create a Streamlit app
-APP_TITLE = 'Real Estate Market Guide'
+APP_TITLE = 'Real Estate Market Analyzer'
 
 st.set_page_config(
     layout = 'wide',
@@ -241,7 +241,7 @@ def main():
 
         with col1:
             #st.slider("Select your budget range", 0, 100000, 50)
-            median_income_threshold = st.slider("Budget Range", 150000, 100000, 16000)
+            median_income_threshold = st.slider("Budget Range", 150000, 100000, 15000)
             csv_data['is_below_threshold'] = csv_data['suburb_median_income'] < median_income_threshold
             st.write("Click suburb on map to explore further")
             #st.write("")
@@ -273,7 +273,7 @@ def main():
                 ax.set_xlabel('Year')
                 ax.set_ylabel('Median House Price')
                 ax.set_title(f'Median House Price in {suburb_to_display} Over the Years')
-                formatter = FuncFormatter(lambda x, _: f'{int(x / 1e6)}M')
+                formatter = FuncFormatter(lambda x, _: f'{float(x / 1e6)}M')
                 ax.yaxis.set_major_formatter(formatter)
                 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
                 # Display the line chart in col2
