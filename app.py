@@ -181,41 +181,46 @@ def create_network_graph(df, selected_suburb):
     return fig
 
 def create_network_graph_matplotlib(df, selected_suburb):
-    # Create a NetworkX graph
-    G = nx.Graph()
+    try:
+        # Create a NetworkX graph
+        G = nx.Graph()
 
-    # Add nodes and edges
-    for index, row in df.iterrows():
-        suburb = row['suburb']
-        nearest_suburbs = row['nearest_suburbs'].split(',')
-        for neighbor in nearest_suburbs:
-            G.add_edge(suburb, neighbor)
+        # Add nodes and edges
+        for index, row in df.iterrows():
+            suburb = row['suburb']
+            nearest_suburbs = row['nearest_suburbs'].split(',')
+            for neighbor in nearest_suburbs:
+                G.add_edge(suburb, neighbor)
 
-    # Define positions for nodes using a custom layout (you can experiment with different layouts)
-    pos = nx.spring_layout(G, seed=42)
+        # Check if the selected suburb is in the graph
+        if selected_suburb not in G.nodes():
+            raise ValueError(f"No data found for suburb: {selected_suburb}")
+        
+        # Define positions for nodes using a custom layout (you can experiment with different layouts)
+        pos = nx.spring_layout(G, seed=42)
 
-    # Create a Matplotlib figure for the network graph
-    plt.figure(figsize=(10, 10))
+        # Create a Matplotlib figure for the network graph
+        plt.figure(figsize=(10, 10))
 
-    # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_size=100, node_color='blue', alpha=0.7)
+        # Draw nodes
+        nx.draw_networkx_nodes(G, pos, node_size=100, node_color='blue', alpha=0.7)
 
-    # Draw edges
-    nx.draw_networkx_edges(G, pos, edge_color='gray', alpha=0.5)
+        # Draw edges
+        nx.draw_networkx_edges(G, pos, edge_color='gray', alpha=0.5)
 
-    # Add labels for nodes
-    labels = {node: node for node in G.nodes()}
-    nx.draw_networkx_labels(G, pos, labels, font_size=6, font_color='black')
+        # Add labels for nodes
+        labels = {node: node for node in G.nodes()}
+        nx.draw_networkx_labels(G, pos, labels, font_size=6, font_color='black')
 
-    # Customize the appearance of the graph
-    plt.title(f"Network Graph for {selected_suburb}")
-    plt.axis('off')
+        # Customize the appearance of the graph
+        plt.title(f"Network Graph for {selected_suburb}")
+        plt.axis('off')
 
-    # Save the Matplotlib figure or display it in  Streamlit app
-    # You can save it to a file using plt.savefig('network_graph.png')
-    # Or display it in  Streamlit app using plt.show()
+        return plt
+    except ValueError as e:
+        print(e)
 
-    return plt
+        return None
 
 
 
@@ -260,59 +265,71 @@ def main():
 
             suburb_to_display = suburb_name if suburb_name else DEFAULT_SUBURB
             median_price_data = prepare_data_for_line_chart(csv_data, suburb_to_display)
-            # Create the line chart
-            fig, ax = plt.subplots(figsize=(8, 4))
-            ax.plot(median_price_data['Year'], median_price_data['price'], marker='o')
-            ax.set_xlabel('Year')
-            ax.set_ylabel('Median House Price')
-            ax.set_title(f'Median House Price in {suburb_to_display} Over the Years')
-            formatter = FuncFormatter(lambda x, _: f'{int(x / 1e6)}M')
-            ax.yaxis.set_major_formatter(formatter)
-            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-            # Display the line chart in col2
-            st.pyplot(fig) 
-
+            
+            if not median_price_data.empty:
+                # Create the line chart
+                fig, ax = plt.subplots(figsize=(8, 4))
+                ax.plot(median_price_data['Year'], median_price_data['price'], marker='o')
+                ax.set_xlabel('Year')
+                ax.set_ylabel('Median House Price')
+                ax.set_title(f'Median House Price in {suburb_to_display} Over the Years')
+                formatter = FuncFormatter(lambda x, _: f'{int(x / 1e6)}M')
+                ax.yaxis.set_major_formatter(formatter)
+                ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+                # Display the line chart in col2
+                st.pyplot(fig) 
+            else:
+                st.warning("No data available for the selected suburb.")
     with tab2:
-        df = load_network_data()
+        try:
+            df = load_network_data()
 
-        # Filter the data to include only the selected or default suburb
-        suburb_to_display = suburb_name if suburb_name else DEFAULT_SUBURB
-        selected_suburb_data = df[(df['suburb'] == suburb_to_display) | (df['nearest_suburbs'].str.contains(suburb_to_display))]
+            # Filter the data to include only the selected or default suburb
+            suburb_to_display = suburb_name if suburb_name else DEFAULT_SUBURB
+            selected_suburb_data = df[(df['suburb'] == suburb_to_display) | (df['nearest_suburbs'].str.contains(suburb_to_display))]
 
-        # Display the network graph
-        if not selected_suburb_data.empty:
-            #network_graph = create_network_graph(selected_suburb_data, suburb_to_display)
-            #st.plotly_chart(network_graph)
-            network_graph = create_network_graph_matplotlib(selected_suburb_data, suburb_to_display)
-            st.pyplot(network_graph)
+            # Display the network graph
+            if not selected_suburb_data.empty:
+                #network_graph = create_network_graph(selected_suburb_data, suburb_to_display)
+                #st.plotly_chart(network_graph)
+                network_graph = create_network_graph_matplotlib(selected_suburb_data, suburb_to_display)
+                st.pyplot(network_graph)
+        except IndexError as e:
+                st.error(f"Data is not available for the selected suburb.")
     
     with tab3:
         col1, col2 = st.columns(2)
 
         with col1:
-            # Loading data for the bar chart
-            data_for_bar_chart = pd.read_csv("data/liveability.csv")
+            try:
+                # Loading data for the bar chart
+                data_for_bar_chart = pd.read_csv("data/liveability.csv")
 
-            if not suburb_name:
-                suburb_name = "Sydney"
+                if not suburb_name:
+                    suburb_name = "Sydney"
 
-            # Display the selected suburb
-            #st.write(f"Selected Suburb: {suburb_name}")
+                # Display the selected suburb
+                #st.write(f"Selected Suburb: {suburb_name}")
 
-            # Display the bar chart for the selected suburb
-            bar_chart = create_bar_chart(data_for_bar_chart, suburb_name)
-            st.pyplot(bar_chart)
+                # Display the bar chart for the selected suburb
+                bar_chart = create_bar_chart(data_for_bar_chart, suburb_name)
+                st.pyplot(bar_chart)
+            except IndexError as e:
+                st.error(f"Data is not available for the selected suburb.")
         
         with col2:
-            if not suburb_name:
-                suburb_name = "Sydney"
+            try:
+                if not suburb_name:
+                    suburb_name = "Sydney"
 
-            # Display the selected suburb
-            #st.write(f"Selected Suburb: {suburb_name}")
+                # Display the selected suburb
+                #st.write(f"Selected Suburb: {suburb_name}")
 
-            # Display the bar chart for the selected suburb
-            scatter_chart = create_scatter_chart(data_for_bar_chart, suburb_name)
-            st.pyplot(scatter_chart)
+                # Display the bar chart for the selected suburb
+                scatter_chart = create_scatter_chart(data_for_bar_chart, suburb_name)
+                st.pyplot(scatter_chart)
+            except IndexError as e:
+                st.error(f"Data is not available for the selected suburb.")
     
 
 if __name__ == "__main__":
