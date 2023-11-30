@@ -16,6 +16,7 @@ APP_TITLE = 'Real Estate Market Analyzer'
 st.set_page_config(
     layout = 'wide',
     page_title=APP_TITLE,
+    initial_sidebar_state="collapsed",
     page_icon=":house:",
     #vertical_scroll="none" 
 )
@@ -25,6 +26,17 @@ st.title(APP_TITLE)
 APP_SUB_TITLE = 'Sydney Suburb Data Visualization'
 
 DEFAULT_SUBURB = "Sydney"
+
+st.markdown(
+    """
+    <style>
+        * {
+            overflow-anchor: none !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 def display_map(df):
 
@@ -138,82 +150,49 @@ def get_suburb_population(suburb_name, df):
     return "17,252"  
 
 def load_network_data():
-    df = pd.read_csv('data/similar_suburbsJ.csv')  
+    df = pd.read_csv('data/similar_suburbs_final.csv')  
     return df
-
-def create_network_graph(df, selected_suburb):
-    # Create a NetworkX graph
-    G = nx.Graph()
-
-    # Add nodes and edges 
-    for index, row in df.iterrows():
-        suburb = row['suburb']
-        nearest_suburbs = row['nearest_suburbs'].split(',')
-        for neighbor in nearest_suburbs:
-            G.add_edge(suburb, neighbor)
-
-    # Define positions for nodes using a custom layout (you can experiment with different layouts)
-    pos = nx.spring_layout(G, seed=42)
-
-    # Create a Plotly figure for the network graph
-    fig = go.Figure()
-
-    # Add nodes to the figure
-    for node, (x, y) in pos.items():
-        fig.add_trace(go.Scatter(x=[x], y=[y], mode="markers", text=node, marker=dict(size=10)))
-
-    # Add edges to the figure
-    for edge in G.edges():
-        x0, y0 = pos[edge[0]]
-        x1, y1 = pos[edge[1]]
-        fig.add_trace(go.Scatter(x=[x0, x1], y=[y0, y1], mode="lines"))
-
-    # Customize the layout and appearance of the graph
-    fig.update_layout(
-        showlegend=False,
-        hovermode="closest",
-        title=f"Network Graph for {selected_suburb}",
-        title_x=0.5,
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-    )
-
-    return fig
 
 def create_network_graph_matplotlib(df, selected_suburb):
     try:
         # Create a NetworkX graph
         G = nx.Graph()
 
-        # Add nodes and edges
-        for index, row in df.iterrows():
+        # Filter data for the selected suburb
+        selected_suburb_data = df[(df['suburb'] == selected_suburb)]
+
+        # Add nodes and edges for the selected suburb and its immediate neighbors
+        for index, row in selected_suburb_data.iterrows():
             suburb = row['suburb']
             nearest_suburbs = row['nearest_suburbs'].split(',')
             for neighbor in nearest_suburbs:
+                if neighbor == selected_suburb:
+                    G.add_node(selected_suburb)
                 G.add_edge(suburb, neighbor)
 
         # Check if the selected suburb is in the graph
         if selected_suburb not in G.nodes():
-            raise ValueError(f"No data found for suburb: {selected_suburb}")
+            raise IndexError(f"Data is not available for the selected suburb.")
         
         # Define positions for nodes using a custom layout (you can experiment with different layouts)
-        pos = nx.spring_layout(G, seed=42)
+        pos = nx.spring_layout(G, seed=42, k=0.3)
 
         # Create a Matplotlib figure for the network graph
-        plt.figure(figsize=(10, 10))
+        #plt.figure(figsize=(3, 3))
+        fig, ax = plt.subplots(figsize=(4, 2))
 
         # Draw nodes
-        nx.draw_networkx_nodes(G, pos, node_size=100, node_color='blue', alpha=0.7)
+        nx.draw_networkx_nodes(G, pos, node_size=30, node_color='blue', alpha=0.5)
 
         # Draw edges
         nx.draw_networkx_edges(G, pos, edge_color='gray', alpha=0.5)
 
         # Add labels for nodes
         labels = {node: node for node in G.nodes()}
-        nx.draw_networkx_labels(G, pos, labels, font_size=6, font_color='black')
+        nx.draw_networkx_labels(G, pos, labels, font_size=3, font_color='black')
 
         # Customize the appearance of the graph
-        plt.title(f"Network Graph for {selected_suburb}")
+        plt.title(f"Network Graph for {selected_suburb}",fontsize=3)
         plt.axis('off')
 
         return plt
@@ -222,11 +201,11 @@ def create_network_graph_matplotlib(df, selected_suburb):
 
         return None
 
-
-
 def main():
 
     tab1, tab2, tab3 = st.tabs(["Select your suburb", "Suburbs similar to your choice","Liveability Rating of Suburb"])
+
+    #st.set_option('deprecation.showPyplotGlobalUse', False)
 
     with tab1:
         #st.set_page_config(APP_TITLE)
@@ -283,15 +262,13 @@ def main():
     with tab2:
         try:
             df = load_network_data()
-
+            plt.figure(figsize=(3, 3))
             # Filter the data to include only the selected or default suburb
             suburb_to_display = suburb_name if suburb_name else DEFAULT_SUBURB
             selected_suburb_data = df[(df['suburb'] == suburb_to_display) | (df['nearest_suburbs'].str.contains(suburb_to_display))]
 
             # Display the network graph
             if not selected_suburb_data.empty:
-                #network_graph = create_network_graph(selected_suburb_data, suburb_to_display)
-                #st.plotly_chart(network_graph)
                 network_graph = create_network_graph_matplotlib(selected_suburb_data, suburb_to_display)
                 st.pyplot(network_graph)
         except IndexError as e:
